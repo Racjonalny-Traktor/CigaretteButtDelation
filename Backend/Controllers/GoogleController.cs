@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
+using Newtonsoft.Json;
 
 namespace microserv.Controllers
 {
@@ -34,10 +35,10 @@ namespace microserv.Controllers
         }
 
         [HttpPost("try")]
-        public IActionResult GooglesEndpoint(string o)
+        public IActionResult GooglesEndpoint(object o)
         {
 
-            _logger.LogError(o.ToString());
+            _logger.LogError(JsonConvert.SerializeObject(o));
             return Ok();
         }
 
