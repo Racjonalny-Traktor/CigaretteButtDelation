@@ -89,7 +89,7 @@ namespace microserv.Controllers
                     geometry = new
                     {
                         type = "Point",
-                        coordinates = new[] { x.Long, x.Lat, x.CigarettesNum }
+                        coordinates = new[] { x.Lat, x.Long, x.CigarettesNum }
                     }
                 })
             });
