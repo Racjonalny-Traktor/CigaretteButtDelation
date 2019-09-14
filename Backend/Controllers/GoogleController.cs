@@ -1,6 +1,7 @@
 ﻿using microserv.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
@@ -13,11 +14,13 @@ namespace microserv.Controllers
     {
         private readonly DataContext _context;
         private readonly IConfiguration _configuration;
+        private readonly ILogger _logger;
 
-        public GoogleController(DataContext context, IConfiguration configuration)
+        public GoogleController(DataContext context, IConfiguration configuration, ILogger<GoogleController> logger )
         {
             _context = context;
             _configuration = configuration;
+            _logger = logger;
         }
 
 
@@ -34,8 +37,7 @@ namespace microserv.Controllers
         public IActionResult GooglesEndpoint(object o)
         {
 
-            LogHelper.LogWarning(o.ToString());
-
+            _logger.LogError(o.ToString());
             return Ok();
         }
 
