@@ -49,9 +49,7 @@ namespace microserv.Controllers
         public IActionResult GooglesEndpoint([FromBody] GoogleRequest data)
         {
             _logger.LogError(new StreamReader(Request.Body).ReadToEnd());
-            //_logger.LogError(JsonConvert.SerializeObject(Request.Headers));
-            //_logger.LogError($"cl:{Request.ContentLength}, ct:{Request.ContentType}, host:{Request.Host}");
-            //_logger.LogError("#####");
+            _logger.LogError("#####");
 
             try
             {
