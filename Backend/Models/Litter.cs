@@ -1,4 +1,6 @@
-﻿namespace microserv.Models
+﻿using System;
+
+namespace microserv.Models
 {
     public class Litter
     {
@@ -8,5 +10,7 @@
         public int CigarettesNum { get; set; }
         public string Description { get; set; }
         public string ImageUrl { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string UserId { get; set; }
     }
 }

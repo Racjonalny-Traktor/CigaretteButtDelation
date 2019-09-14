@@ -2,8 +2,11 @@
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading.Tasks;
 using System.Web;
+using Google.Apis.Auth;
 using Google.Cloud.Dialogflow.V2;
 using microserv.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -14,6 +17,7 @@ using Microsoft.IdentityModel.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 
 namespace microserv.Controllers
 {
@@ -46,57 +50,72 @@ namespace microserv.Controllers
         
 
         [HttpPost("try")]
-        public IActionResult GooglesEndpoint([FromBody] GoogleRequest data)
+        public IActionResult GooglesEndpoint()
         {
-            _logger.LogError(new StreamReader(Request.Body).ReadToEnd());
-            _logger.LogError("#####");
+            var json = new StreamReader(Request.Body).ReadToEnd();
+            _logger.LogWarning(json);
 
-            //try
-            //{
-            //    using (var wc = new WebClient())
-            //    {
-            //        var link = HttpUtility.HtmlDecode(data.OriginalDetectIntentRequest.Payload.Data.Message.Attachments
-            //                       .FirstOrDefault()?.Payload.Url) ?? data.OriginalDetectIntentRequest.Payload.Data.Message.Attachments.FirstOrDefault()?.Payload.Url;
-            //        wc.DownloadFile(new Uri(link), $"./pic_{data.ResponseId}");
-            //    }
+            var data1 = JsonConvert.DeserializeObject<GoogleRequest>(json);
+            var data2 = JsonConvert.DeserializeObject<WebhookRequest>(json);
+
+            var attachments = data1.OriginalDetectIntentRequest.Payload.Data.Message.Attachments;
+            //image is sent
+            if (attachments.Any() &&
+                attachments.First().Type
+                    .Equals("image", StringComparison.InvariantCultureIgnoreCase))
+            {
+                _logger.LogInformation("pic is sent, creating");
+
+                var picUrl = attachments.First().Payload.Url;
+
+                var entity = new Litter
+                {
+                    UserId = data1.OriginalDetectIntentRequest.Payload.Data.Sender.Id,
+                    ImageUrl = picUrl
+                };
+
+                _context.Litters.Add(entity);
+                _context.SaveChanges();
+            }
+            else //location is sent
+            {
+                _logger.LogInformation("Location sent, updating ");
+
+                var coords = data2.QueryResult.OutputContexts
+                    .FirstOrDefault(x => x.Name.Contains("location", StringComparison.InvariantCultureIgnoreCase));
+                if (coords == null) return BadRequest();
+
+                var lat = coords.Parameters.Fields["lat"].NumberValue;
+                var lon = coords.Parameters.Fields["long"].NumberValue;
+
+                var userId = data1.OriginalDetectIntentRequest.Payload.Data.Sender.Id;
+
+                //litters without lat/long/num saved
+                var litters = _context.Litters
+                    .Where(x => x.UserId == userId && x.CigarettesNum <= 0)
+                    .OrderByDescending(x => x.CreatedAt)
+                    .ToArray();
+                var litter = litters.FirstOrDefault();
+                var toDelete = litters.Skip(1);
+
+                _context.Litters.RemoveRange(litters);
+
+                litter.CigarettesNum = 1;
+                litter.Lat = lat;
+                litter.Long = lon;
+
+                _context.Litters.Update(litter);
+                _context.SaveChanges();
+            }
+
+                //var raw = new JsonSerializer().Deserialize<WebhookRequest>(new BsonReader(Request.Body));
+
             //    //process the file
             //    //ask for location?
             //    //save 
             //    //display map
 
-                var testAnswer = $"Dialogflow Request for intent {data.QueryResult.FullfillmentText}'";
-                var dialogflowResponse = new WebhookResponse
-                {
-                    FulfillmentText = testAnswer,
-                    FulfillmentMessages =
-                    { new Intent.Types.Message
-                        { SimpleResponses = new Intent.Types.Message.Types.SimpleResponses
-                            { SimpleResponses_ =
-                                { new Intent.Types.Message.Types.SimpleResponse
-                                    {
-                                        DisplayText = testAnswer,
-                                        TextToSpeech = testAnswer,
-                                        //Ssml = $"<speak>{testAnswer}</speak>"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                };
-                var jsonResponse = dialogflowResponse.ToString();
-                return new ContentResult { Content = jsonResponse, ContentType = "application/json" };
-
-            //}
-            //catch (Exception e)
-            //{
-            //    return BadRequest(new
-            //    {
-            //        e.Message
-            //    });
-            //}
-
-
-            //return Ok();
+            return Ok();
         }
 
         public class GoogleRequest

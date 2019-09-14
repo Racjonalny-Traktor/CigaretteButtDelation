@@ -7,13 +7,15 @@ namespace microserv.Models
         public DataContext(DbContextOptions<DataContext> options) : base(options)
         {
 
-        }  
+        }
 
         public DbSet<Litter> Litters { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<Litter>().Property(x => x.CreatedAt).HasDefaultValueSql("getdate()").ValueGeneratedOnAdd();
         }
     }
 }
