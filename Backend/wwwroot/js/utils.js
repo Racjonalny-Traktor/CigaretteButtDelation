@@ -1,0 +1,1 @@
+export var baseUrl = "https://fajeczky.azurewebsites.net";
