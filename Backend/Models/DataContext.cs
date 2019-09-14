@@ -7,7 +7,7 @@ namespace microserv.Models
         public DataContext(DbContextOptions<DataContext> options) : base(options)
         {
 
-        }
+        }  
 
         public DbSet<Litter> Litters { get; set; }
 
