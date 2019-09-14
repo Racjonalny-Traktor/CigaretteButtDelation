@@ -17,7 +17,7 @@ class Fetcher{
         })
     }
 
-    fetchLitter(){
+    fetchLitter(){  
         const url = `${baseUrl}/api/Litter`;
         return fetch(url, headers).then(response => response.json());
     }
