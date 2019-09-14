@@ -35,7 +35,7 @@ namespace microserv.Controllers
         }
 
         [HttpPost("try")]
-        public IActionResult GooglesEndpoint(object o)
+        public IActionResult GooglesEndpoint([FromBody] object o)
         {
 
             _logger.LogError(JsonConvert.SerializeObject(o));
