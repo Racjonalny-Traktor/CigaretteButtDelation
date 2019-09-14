@@ -1,6 +1,13 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Threading.Tasks;
+using System.Web;
+using Google.Cloud.Dialogflow.V2;
 using microserv.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Logging;
@@ -35,15 +42,103 @@ namespace microserv.Controllers
             return container;
         }
 
+        private object GetBlobBlockForFile(string filename) => GetCloudBlobContainer().GetBlockBlobReference($"{filename}");
+        
+
         [HttpPost("try")]
-        public IActionResult GooglesEndpoint()
+        public IActionResult GooglesEndpoint([FromBody] GoogleRequest data)
         {
             _logger.LogError(new StreamReader(Request.Body).ReadToEnd());
-            _logger.LogError(JsonConvert.SerializeObject(Request.Headers));
-            _logger.LogError($"cl:{Request.ContentLength}, ct:{Request.ContentType}, host:{Request.Host}");
-            _logger.LogError("#####");
+            //_logger.LogError(JsonConvert.SerializeObject(Request.Headers));
+            //_logger.LogError($"cl:{Request.ContentLength}, ct:{Request.ContentType}, host:{Request.Host}");
+            //_logger.LogError("#####");
+
+            try
+            {
+                using (var wc = new WebClient())
+                {
+                    var link = HttpUtility.HtmlDecode(data.OriginalDetectIntentRequest.Payload.Data.Message.Attachments
+                        .FirstOrDefault()?.Payload.Url);
+                    wc.DownloadFile(new Uri(link), $"pics/{data.ResponseId}");
+                }
+                //process the file
+                //ask for location?
+                //save 
+                //display map
+
+            }
+            catch (Exception e)
+            {
+                return BadRequest(new
+                {
+                    e.Message
+                });
+            }
+
+
             return Ok();
         }
-         
+
+        public class GoogleRequest
+        {
+            public string ResponseId { get; set; }
+            public GoogleQueryResult QueryResult { get; set; }
+            public GoogleOriginalDetectIntentRequest OriginalDetectIntentRequest { get; set; }
+            public string Session { get; set; }
+        }
+
+        public class GoogleQueryResult
+        {
+
+        }
+
+        public class GoogleOriginalDetectIntentRequest
+        {
+            public string Source { get; set; }
+            public GooglePayload Payload { get; set; }
+        }
+
+        public class GooglePayload
+        {
+            public GooglePayloadData Data { get; set; }
+            public string Source { get; set; }
+        }
+
+        public class GooglePayloadData
+        {
+            public GoogleRecipent Recipent { get; set; }
+            public GoogleMessage Message { get; set; }
+            public double Timestamp { get; set; }
+            public GoogleSender Sender { get; set; }
+        }
+
+        public class GoogleRecipent
+        {
+            public string Id { get; set; }
+        }
+
+        public class GoogleMessage
+        {
+            public string Mid { get; set; }
+            public GoogleAttachment[] Attachments { get; set; }
+        }
+
+        public class GoogleAttachment
+        {
+            public GoogleAttachmentPayload Payload { get; set; }
+            public string Type { get; set; }
+        }
+
+        public class GoogleAttachmentPayload
+        {
+            public string Url { get; set; }
+        }
+
+        public class GoogleSender
+        {
+            public string Id { get; set; }
+        }
+
+
     }
 }
