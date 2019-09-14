@@ -51,30 +51,52 @@ namespace microserv.Controllers
             _logger.LogError(new StreamReader(Request.Body).ReadToEnd());
             _logger.LogError("#####");
 
-            try
-            {
-                using (var wc = new WebClient())
+            //try
+            //{
+            //    using (var wc = new WebClient())
+            //    {
+            //        var link = HttpUtility.HtmlDecode(data.OriginalDetectIntentRequest.Payload.Data.Message.Attachments
+            //                       .FirstOrDefault()?.Payload.Url) ?? data.OriginalDetectIntentRequest.Payload.Data.Message.Attachments.FirstOrDefault()?.Payload.Url;
+            //        wc.DownloadFile(new Uri(link), $"./pic_{data.ResponseId}");
+            //    }
+            //    //process the file
+            //    //ask for location?
+            //    //save 
+            //    //display map
+
+                var testAnswer = $"Dialogflow Request for intent {data.QueryResult.FullfillmentText}'";
+                var dialogflowResponse = new WebhookResponse
                 {
-                    var link = HttpUtility.HtmlDecode(data.OriginalDetectIntentRequest.Payload.Data.Message.Attachments
-                                   .FirstOrDefault()?.Payload.Url) ?? data.OriginalDetectIntentRequest.Payload.Data.Message.Attachments.FirstOrDefault()?.Payload.Url;
-                    wc.DownloadFile(new Uri(link), $"./pic_{data.ResponseId}");
-                }
-                //process the file
-                //ask for location?
-                //save 
-                //display map
+                    FulfillmentText = testAnswer,
+                    FulfillmentMessages =
+                    { new Intent.Types.Message
+                        { SimpleResponses = new Intent.Types.Message.Types.SimpleResponses
+                            { SimpleResponses_ =
+                                { new Intent.Types.Message.Types.SimpleResponse
+                                    {
+                                        DisplayText = testAnswer,
+                                        TextToSpeech = testAnswer,
+                                        //Ssml = $"<speak>{testAnswer}</speak>"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+                var jsonResponse = dialogflowResponse.ToString();
+                return new ContentResult { Content = jsonResponse, ContentType = "application/json" };
 
-            }
-            catch (Exception e)
-            {
-                return BadRequest(new
-                {
-                    e.Message
-                });
-            }
+            //}
+            //catch (Exception e)
+            //{
+            //    return BadRequest(new
+            //    {
+            //        e.Message
+            //    });
+            //}
 
 
-            return Ok();
+            //return Ok();
         }
 
         public class GoogleRequest
@@ -87,7 +109,8 @@ namespace microserv.Controllers
 
         public class GoogleQueryResult
         {
-
+            public string QueryText { get; set; }
+            public string FullfillmentText { get; set; }
         }
 
         public class GoogleOriginalDetectIntentRequest
