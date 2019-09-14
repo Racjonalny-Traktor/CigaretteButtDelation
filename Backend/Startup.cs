@@ -34,6 +34,7 @@ namespace microserv
             {
                 c.SwaggerDoc("v1", new Info { Title = "Values Api", Version = "v1" });
             });
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -43,6 +44,11 @@ namespace microserv
             {
                 app.UseDeveloperExceptionPage();
             }
+            app.UseCors(builder => builder
+                .AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+                .AllowCredentials());
             app.UseDefaultFiles();
             app.UseStaticFiles();
             app.UseMvc();
