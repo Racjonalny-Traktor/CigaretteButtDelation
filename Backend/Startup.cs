@@ -43,7 +43,8 @@ namespace microserv
             {
                 app.UseDeveloperExceptionPage();
             }
-
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
             app.UseMvc();
             app.UseSwagger();
             app.UseSwaggerUI(c =>
