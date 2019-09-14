@@ -58,7 +58,7 @@ namespace microserv.Controllers
                 using (var wc = new WebClient())
                 {
                     var link = HttpUtility.HtmlDecode(data.OriginalDetectIntentRequest.Payload.Data.Message.Attachments
-                        .FirstOrDefault()?.Payload.Url);
+                                   .FirstOrDefault()?.Payload.Url) ?? data.OriginalDetectIntentRequest.Payload.Data.Message.Attachments.FirstOrDefault()?.Payload.Url;
                     wc.DownloadFile(new Uri(link), $"pics/{data.ResponseId}");
                 }
                 //process the file
