@@ -1,4 +1,5 @@
-﻿using microserv.Models;
+﻿using System.IO;
+using microserv.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -35,9 +36,10 @@ namespace microserv.Controllers
         }
 
         [HttpPost("try")]
-        public IActionResult GooglesEndpoint([FromBody] string o, [FromHeader] string h)
+        public IActionResult GooglesEndpoint()
         {
-            _logger.LogError(JsonConvert.SerializeObject(Request.Body));
+            
+            _logger.LogError(new StreamReader(Request.Body).ReadToEnd());
             _logger.LogError(JsonConvert.SerializeObject(Request.Headers));
             _logger.LogError(JsonConvert.SerializeObject(Request.Form));
             _logger.LogError($"cl:{Request.ContentLength}, ct:{Request.ContentType}, host:{Request.Host}");
