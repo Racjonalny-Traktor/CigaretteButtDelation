@@ -29,7 +29,7 @@ namespace microserv
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
-            services.AddDbContext<DataContext>(opt => opt.UseSqlServer(Configuration["db"]));
+            services.AddDbContext<DataContext>(opt => opt.UseSqlServer(Configuration.GetConnectionString("db")));
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new Info { Title = "Values Api", Version = "v1" });

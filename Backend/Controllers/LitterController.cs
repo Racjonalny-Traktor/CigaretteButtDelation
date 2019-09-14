@@ -1,5 +1,8 @@
 ﻿using microserv.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 using System.Linq;
 
 namespace microserv.Controllers
@@ -8,9 +11,20 @@ namespace microserv.Controllers
     public class LitterController : ControllerBase
     {
         private readonly DataContext _context;
-        public LitterController(DataContext context)
+        private readonly IConfiguration _configuration;
+        public LitterController(DataContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
+        }
+
+        private CloudBlobContainer GetCloudBlobContainer()
+        {
+            var storageAccount = CloudStorageAccount.Parse(
+                _configuration.GetConnectionString("storage"));
+            var blobClient = storageAccount.CreateCloudBlobClient();
+            var container = blobClient.GetContainerReference("pics");
+            return container;
         }
 
         [HttpGet("")]
