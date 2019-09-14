@@ -13,7 +13,7 @@ map.on('load', () =>{
         });
          
         map.addLayer({
-        "id": "earthquakes-heat",
+        "id": "cigarettes-heat",
         "type": "heatmap",
         "source": "earthquakes",
         "maxzoom": maxZoom,
@@ -67,57 +67,31 @@ map.on('load', () =>{
             ]*/
         }}, 
         'waterway-label');
-         
-        /*map.addLayer({
-        "id": "earthquakes-point",
-        "type": "circle",
-        "source": "earthquakes",
-        "minzoom": 7,
-        "paint": {
-        // Size circle radius by earthquake magnitude and zoom level
-        "circle-radius": [
-        "interpolate",
-        ["linear"],
-        ["zoom"],
-        7, [
-        "interpolate",
-        ["linear"],
-        ["get", "mag"],
-        1, 1,
-        6, 4
-        ],
-        16, [
-        "interpolate",
-        ["linear"],
-        ["get", "mag"],
-        1, 5,
-        6, 50
-        ]
-        ],
-        // Color circle by earthquake magnitude
-        "circle-color": [
-        "interpolate",
-        ["linear"],
-        ["get", "mag"],
-        1, "rgba(33,102,172,0)",
-        2, "rgb(103,169,207)",
-        3, "rgb(209,229,240)",
-        4, "rgb(253,219,199)",
-        5, "rgb(239,138,98)",
-        6, "rgb(178,24,43)"
-        ],
-        "circle-stroke-color": "white",
-        "circle-stroke-width": 1,
-        // Transition from heatmap to circle layer by zoom level
-        "circle-opacity": [
-        "interpolate",
-        ["linear"],
-        ["zoom"],
-        7, 0,
-        8, 1
-        ]
-        }
-        }, 'waterway-label');*/
+                // location of the feature, with description HTML from its properties.
+        map.on('click', 'cigarettes-heat', function (e) {
+            var coordinates = e.features[0].geometry.coordinates.slice();
+            var description = e.features[0].properties.description;
+            console.log(coordinates);
+
+            while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+            new mapboxgl.Popup()
+            .setLngLat(coordinates)
+            .setHTML(description)
+            .addTo(map);
+            }
+        });
+
+        map.on('mouseenter', 'cigarettes-heat', function () {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+             
+            // Change it back to a pointer when it leaves.
+            map.on('mouseleave', 'cigarettes-heat', function () {
+            map.getCanvas().style.cursor = '';
+        });
+            
+    
 })
 
 export default map;
