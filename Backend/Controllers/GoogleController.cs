@@ -38,10 +38,8 @@ namespace microserv.Controllers
         [HttpPost("try")]
         public IActionResult GooglesEndpoint()
         {
-            
             _logger.LogError(new StreamReader(Request.Body).ReadToEnd());
             _logger.LogError(JsonConvert.SerializeObject(Request.Headers));
-            _logger.LogError(JsonConvert.SerializeObject(Request.Form));
             _logger.LogError($"cl:{Request.ContentLength}, ct:{Request.ContentType}, host:{Request.Host}");
             _logger.LogError("#####");
             return Ok();
