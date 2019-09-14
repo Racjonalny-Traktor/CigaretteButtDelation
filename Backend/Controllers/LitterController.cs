@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace microserv.Controllers
 {
@@ -33,24 +34,21 @@ namespace microserv.Controllers
             [FromForm] IFormFile pic,
             [FromForm] Litter data)
         {
-
             _context.Litters.Add(data);
             _context.SaveChanges();
 
-            
             if (pic.Length <= 0)
-                return BadRequest("File error");
+                return Ok();
 
             var container = GetCloudBlobContainer();
             var blockBlob = container.GetBlockBlobReference($"{data.Id}.jpg");
 
-            using (var stream = pic.OpenReadStream()) 
-                blockBlob.UploadFromStreamAsync(stream);
-
+            using (var stream = pic.OpenReadStream())
+                Task.WaitAll(blockBlob.UploadFromStreamAsync(stream));
+            
             data.ImageUrl = blockBlob.SnapshotQualifiedStorageUri.PrimaryUri.ToString();
             _context.Litters.Update(data);
             _context.SaveChanges();
-  
 
             return Ok();
         }
