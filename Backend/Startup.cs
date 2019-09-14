@@ -39,7 +39,7 @@ namespace microserv
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
         {
             if (env.IsDevelopment())
             {
@@ -50,6 +50,9 @@ namespace microserv
                 .AllowAnyMethod()
                 .AllowAnyHeader()
                 .AllowCredentials());
+
+            loggerFactory.AddLog4Net();
+
             app.UseDefaultFiles();
             app.UseStaticFiles();
             app.UseMvc();
