@@ -35,10 +35,12 @@ namespace microserv.Controllers
         }
 
         [HttpPost("try")]
-        public IActionResult GooglesEndpoint([FromBody] string o)
+        public IActionResult GooglesEndpoint([FromBody] string o, [FromHeader] string h)
         {
-
-            _logger.LogError(JsonConvert.SerializeObject(o));
+            _logger.LogError(JsonConvert.SerializeObject(Response));
+            _logger.LogError(o);
+            _logger.LogError(h);
+            _logger.LogError("#####");
             return Ok();
         }
          
