@@ -57,7 +57,7 @@ namespace microserv.Controllers
                 {
                     var link = HttpUtility.HtmlDecode(data.OriginalDetectIntentRequest.Payload.Data.Message.Attachments
                                    .FirstOrDefault()?.Payload.Url) ?? data.OriginalDetectIntentRequest.Payload.Data.Message.Attachments.FirstOrDefault()?.Payload.Url;
-                    wc.DownloadFile(new Uri(link), $"pics/{data.ResponseId}");
+                    wc.DownloadFile(new Uri(link), $"./pic_{data.ResponseId}");
                 }
                 //process the file
                 //ask for location?
