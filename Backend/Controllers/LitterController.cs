@@ -1,4 +1,5 @@
 ﻿using microserv.Models;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.WindowsAzure.Storage;
@@ -25,6 +26,33 @@ namespace microserv.Controllers
             var blobClient = storageAccount.CreateCloudBlobClient();
             var container = blobClient.GetContainerReference("pics");
             return container;
+        }
+
+        [HttpPost("")]
+        public IActionResult Delate(
+            [FromForm] IFormFile pic,
+            [FromForm] Litter data)
+        {
+
+            _context.Litters.Add(data);
+            _context.SaveChanges();
+
+            
+            if (pic.Length <= 0)
+                return BadRequest("File error");
+
+            var container = GetCloudBlobContainer();
+            var blockBlob = container.GetBlockBlobReference($"{data.Id}.jpg");
+
+            using (var stream = pic.OpenReadStream()) 
+                blockBlob.UploadFromStreamAsync(stream);
+
+            data.ImageUrl = blockBlob.SnapshotQualifiedStorageUri.PrimaryUri.ToString();
+            _context.Litters.Update(data);
+            _context.SaveChanges();
+  
+
+            return Ok();
         }
 
         [HttpGet("")]
