@@ -1,9 +1,11 @@
+import fetcher from './fetcher.js';
+
 mapboxgl.accessToken = 'pk.eyJ1Ijoia3Bla2FsYSIsImEiOiJjazBqcDl0dXIwYzJxM2dzdmVoMGdsbmx3In0.LUI-WrcAUM_It4GHMo9hvQ';
 var map = new mapboxgl.Map({
     container: 'mapContainer',
     style: 'mapbox://styles/mapbox/streets-v11',
-    center: [20.829425, 52.1119135],
-     zoom: 13
+    center: [20.830443, 52.113],
+     zoom: 16
 });
 const maxZoom = 22;
 map.on('load', () =>{
@@ -18,7 +20,6 @@ map.on('load', () =>{
         "source": "earthquakes",
         "maxzoom": maxZoom,
         "paint": {
-        // Increase the heatmap weight based on frequency and property magnitude
         "heatmap-weight": [
             "interpolate",
             ["linear"],
@@ -26,8 +27,6 @@ map.on('load', () =>{
             0, 0,
             6, 1
         ],
-        // Increase the heatmap color weight weight by zoom level
-        // heatmap-intensity is a multiplier on top of heatmap-weight
         "heatmap-intensity": [
             "interpolate",
             ["linear"],
@@ -35,9 +34,7 @@ map.on('load', () =>{
             0, 1,
             maxZoom, 3
         ],
-        // Color ramp for heatmap.  Domain is 0 (low) to 1 (high).
-        // Begin color ramp at 0-stop with a 0-transparancy color
-        // to create a blur-like effect.
+   
         "heatmap-color": [
             "interpolate",
             ["linear"],
@@ -49,7 +46,6 @@ map.on('load', () =>{
             0.8, "rgb(239,138,98)",
             1, "rgb(178,24,43)"
         ],
-        // Adjust the heatmap radius by zoom level
         "heatmap-radius": [
             "interpolate",
             ["linear"],
@@ -57,17 +53,8 @@ map.on('load', () =>{
             0, 2,
             maxZoom, 20
         ],
-        // Transition from heatmap to circle layer by zoom level
-        /*"heatmap-opacity": [
-            "interpolate",
-            ["linear"],
-            ["zoom"],
-            7, 1,
-            maxZoom, 0
-            ]*/
         }}, 
         'waterway-label');
-                // location of the feature, with description HTML from its properties.
         map.on('click', 'cigarettes-heat', function (e) {
             var coordinates = e.features[0].geometry.coordinates.slice();
             var description = e.features[0].properties.description;
@@ -82,16 +69,32 @@ map.on('load', () =>{
             }
         });
 
-        map.on('mouseenter', 'cigarettes-heat', function () {
-            map.getCanvas().style.cursor = 'pointer';
-        });
-             
-            // Change it back to a pointer when it leaves.
-            map.on('mouseleave', 'cigarettes-heat', function () {
-            map.getCanvas().style.cursor = '';
-        });
+        map.dragRotate.disable();
+        map.touchZoomRotate.disableRotation();
             
     
 })
 
+export function getNewCigarettesNumber(cigarettes){
+    const canvas = map.getCanvas()
+    const w = canvas.width
+    const h = canvas.height
+    const cUL = map.unproject ([0,0]).toArray()
+    const cUR = map.unproject ([w,0]).toArray()
+    const cLR = map.unproject ([w,h]).toArray()
+    const cLL = map.unproject ([0,h]).toArray()
+    const coordinates = [cUL,cUR,cLR,cLL]
+    let number = 0;
+
+    for(let cig of cigarettes){
+        if(cig.lat > cUL[0] && cig.lat < cUR[0] && cig.long < cUL[1] && cig.long < cUR[1]){
+            number += cig.cigarettesNum;
+        }
+    }
+
+    return number;
+}
+export function getZoom(){
+    return Math.round(map.getZoom());
+}
 export default map;

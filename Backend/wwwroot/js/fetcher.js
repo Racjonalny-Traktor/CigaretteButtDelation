@@ -12,14 +12,23 @@ class Fetcher{
     postData(url, data){
         return fetch(url, {
             method:  'POST',
-            body: JSON.stringify(data),
-            headers:{'Content-Type': 'application/json'}
+            body: data
         })
     }
 
     fetchLitter(){  
         const url = `${baseUrl}/api/Litter`;
         return fetch(url, headers).then(response => response.json());
+    }
+
+    sendLitter(data){
+        let formData = new FormData();
+        formData.append('lat', data.long);
+        formData.append('long', data.lat);
+        formData.append('cigarettesNum', data.cigarettesNum);
+        formData.append('pic', data.pic);
+
+        return this.postData(`${baseUrl}/api/Litter`, formData);
     }
 }
 
