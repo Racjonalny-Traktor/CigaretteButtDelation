@@ -1,5 +1,5 @@
 import map from './map.js';
-import {getNewCigarettesNumber} from './map.js';
+import {getNewCigarettesNumber, getZoom} from './map.js';
 import fetcher from './fetcher.js';
 import './jquery.js';
 
@@ -33,12 +33,26 @@ $(document).ready(() =>{
 
 function findNumberOfCigarettesInArea(){
     let number = getNewCigarettesNumber(cigarettes);
-    console.log(number);
+    let zoom = getZoom();
+    let factor = (number/100000) * (zoom*zoom*zoom);
+    let percent = Math.round((factor * 100) / 80);
     updateCigarettesText(number.toString());
+    updatePollutionText(percent.toString());
 }
 
 function updateCigarettesText(numOfCigarettes){
-    $('.numOfCigarettes').text(`Na tym obszarze jest ${numOfCigarettes} petów`)
+    $('.numOfCigarettes').text(`${numOfCigarettes} butts int this area`);
+}
+
+function updatePollutionText(percent){
+    if (percent > 50){
+        $('.pollutionLevel').addClass('red');
+        $('.pollutionLevel').removeClass('green');
+    }else{
+        $('.pollutionLevel').addClass('green');
+        $('.pollutionLevel').removeClass('red');
+    }
+    $('.pollutionLevel').text(`${percent}%`);
 }
 
 
