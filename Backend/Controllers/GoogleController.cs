@@ -1,24 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Threading.Tasks;
-using System.Web;
-using Google.Apis.Auth;
 using Google.Cloud.Dialogflow.V2;
 using microserv.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Logging;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
 
 namespace microserv.Controllers
 {
@@ -27,28 +14,14 @@ namespace microserv.Controllers
     public class GoogleController : ControllerBase
     {
         private readonly DataContext _context;
-        private readonly IConfiguration _configuration;
         private readonly ILogger _logger;
+        private const StringComparison _stringcompare = StringComparison.InvariantCultureIgnoreCase;
 
-        public GoogleController(DataContext context, IConfiguration configuration, ILogger<GoogleController> logger)
+        public GoogleController(DataContext context, ILogger<GoogleController> logger)
         {
             _context = context;
-            _configuration = configuration;
             _logger = logger;
         }
-
-
-        private CloudBlobContainer GetCloudBlobContainer()
-        {
-            var storageAccount = CloudStorageAccount.Parse(
-                _configuration.GetConnectionString("storage"));
-            var blobClient = storageAccount.CreateCloudBlobClient();
-            var container = blobClient.GetContainerReference("pics");
-            return container;
-        }
-
-        private object GetBlobBlockForFile(string filename) => GetCloudBlobContainer().GetBlockBlobReference($"{filename}");
-
 
         [HttpPost("try")]
         public IActionResult GooglesEndpoint()
@@ -61,151 +34,40 @@ namespace microserv.Controllers
             //fml
 
             var json = new StreamReader(Request.Body).ReadToEnd();
-            _logger.LogWarning(json);
+            _logger.LogWarning(json);   //display json for debug purposes
 
-            var data1 = JsonConvert.DeserializeObject<GoogleRequest>(json);
-            var data2 = JsonConvert.DeserializeObject<WebhookRequest>(json);
+            var data1 = JsonConvert.DeserializeObject<GoogleRequest>(json); // my own type
+            var data2 = JsonConvert.DeserializeObject<WebhookRequest>(json); // type from google lib that doesnt work
 
-            if (data1.OriginalDetectIntentRequest.Source.Equals("facebook", StringComparison.InvariantCultureIgnoreCase)
-            )
+            try
             {
-
-                var attachments = data1?.OriginalDetectIntentRequest?.Payload?.Data?.Message?.Attachments;
-                //image is sent
-                if (attachments != null
-                    && attachments.Any()
-                    && attachments.First().Type.Equals("image", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    _logger.LogInformation("pic is sent, creating");
-
-                    var picUrl = attachments.First().Payload.Url;
-
-                    var entity = new Litter
-                    {
-                        UserId = data1.OriginalDetectIntentRequest.Payload.Data.Sender.Id,
-                        ImageUrl = picUrl
-                    };
-
-                    _context.Litters.Add(entity);
-                    _context.SaveChanges();
-
-                    var reponseText = "Please share your location with us so we know where those cigarette butts are";
-                    var dialogflowResponse = new WebhookResponse
-                    {
-                        FulfillmentText = reponseText,
-                        FulfillmentMessages =
-                        {
-                            new Intent.Types.Message
-                            {
-                                SimpleResponses = new Intent.Types.Message.Types.SimpleResponses
-                                {
-                                    SimpleResponses_ =
-                                    {
-                                        new Intent.Types.Message.Types.SimpleResponse
-                                        {
-                                            DisplayText = reponseText,
-                                            TextToSpeech = reponseText,
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    };
-                    var jsonResponse = dialogflowResponse.ToString();
-                    return new ContentResult {Content = jsonResponse, ContentType = "application/json"};
-                    ;
-                }
-                else if (data1?.OriginalDetectIntentRequest?.Payload?.Data?.Postback?.Payload != null
-                         && data1.OriginalDetectIntentRequest.Payload.Data.Postback.Payload.Contains("LOCATION",
-                             StringComparison.InvariantCultureIgnoreCase))
-                {
-                    _logger.LogInformation("Location sent, updating ");
-
-                    var coords = data1?.OriginalDetectIntentRequest?.Payload?.Data?.Postback?.Data;
-                    if (coords == null) return BadRequest();
-
-                    var userId = data1.OriginalDetectIntentRequest.Payload.Data.Sender.Id;
-
-                    //litters without lat/long/num saved
-                    var litters = _context.Litters
-                        .Where(x => x.UserId == userId && x.CigarettesNum <= 0)
-                        .OrderByDescending(x => x.CreatedAt)
-                        .ToArray();
-                    var litter = litters.FirstOrDefault();
-                    if (litter != null)
-                    {
-
-                        var toDelete = litters.Skip(1);
-
-                        _context.Litters.RemoveRange(litters);
-
-                        litter.CigarettesNum = 1;
-                        litter.Lat = coords.Long;
-                        litter.Long = coords.Lat;
-
-                        _context.Litters.Update(litter);
-                        _context.SaveChanges();
-
-
-
-                        var reportsnum =
-                            _context.Litters.Count(x => x.UserId == userId && x.CreatedAt.Month == DateTime.Now.Month);
-
-                        var nth =
-                            reportsnum % 10 == 1 ? "st" :
-                            reportsnum % 10 == 2 ? "nd" :
-                            reportsnum % 10 == 3 ? "rd" : "th";
-                        var reponseText =
-                            $"Thank you for taking care of the Earth! We'll use this data to take care of cigarette butt littering problem! This was your {reportsnum}{nth} delation :)' \n You can see them now on the map http://fajeczky.azurewebsites.net/";
-                        var dialogflowResponse = new WebhookResponse
-                        {
-                            FulfillmentText = reponseText
-                        };
-
-
-                        var jsonResponse = dialogflowResponse.ToString();
-                        return new ContentResult {Content = jsonResponse, ContentType = "application/json"};
-
-                    }
-                }
-
-                {
-                    var reponseText = "Please take a photo first";
-                    var dialogflowResponse = new WebhookResponse
-                    {
-                        FulfillmentText = reponseText,
-                        FulfillmentMessages =
-                        {
-                            new Intent.Types.Message
-                            {
-                                SimpleResponses = new Intent.Types.Message.Types.SimpleResponses
-                                {
-                                    SimpleResponses_ =
-                                    {
-                                        new Intent.Types.Message.Types.SimpleResponse
-                                        {
-                                            DisplayText = reponseText,
-                                            TextToSpeech = reponseText,
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    };
-                    var jsonResponse = dialogflowResponse.ToString();
-                    return new ContentResult {Content = jsonResponse, ContentType = "application/json"};
-
-                }
+                return HandleChatbotRequest(data1);
             }
-
-            else if (data1.OriginalDetectIntentRequest.Source.Equals("google",
-                StringComparison.InvariantCultureIgnoreCase))
+            catch(Exception e)
             {
-                _logger.LogInformation("google");
-                var res = new
+                _logger.LogError(e.Message);
+            }
+        }
+
+        private IActionResult HandleChatbotRequest(GoogleRequest data1)
+        {
+            var source = data1.OriginalDetectIntentRequest.Source;
+
+            if (source.Equals("facebook", _stringcompare))
+                return ResponseForFacebook(data1);
+            else if (source.Equals("google", _stringcompare))
+                return ResponseForGoogleAssistant();
+            else
+                throw new NotImplementedException("that source is not implemented");
+        }
+
+        private IActionResult ResponseForGoogleAssistant()
+        {
+            _logger.LogInformation("google");
+            var res = new
+            {
+                expectedInputs = new[]
                 {
-                    expectedInputs = new[]
-                    {
                         new
                         {
                             possibleIntents = new []
@@ -223,99 +85,145 @@ namespace microserv.Controllers
                             }
                         }
                     }
-                };
-                var x = new WebhookResponse()
+            };
+            var x = new WebhookResponse()
+            {
+                FollowupEventInput = new EventInput() { Name = "DEVICE_PRECISE_LOCATION" }
+            };
+            var jsonResponse = res.ToString();
+            return new ContentResult { Content = jsonResponse, ContentType = "application/json" };
+        }
+
+        private IActionResult ResponseForFacebook(GoogleRequest data1)
+        {
+            _logger.LogInformation("facebook");
+
+            var attachments = data1?.OriginalDetectIntentRequest?.Payload?.Data?.Message?.Attachments;
+            if (attachments != null && attachments.Any(x => x.Type.Equals("image", _stringcompare)))
+            {
+                _logger.LogInformation("pic is sent, creating");
+
+                var entity = new Litter
                 {
-                    FollowupEventInput = new EventInput() { Name = "DEVICE_PRECISE_LOCATION" }
+                    UserId = data1.OriginalDetectIntentRequest.Payload.Data.Sender.Id,
+                    ImageUrl = attachments.First().Payload.Url
                 };
-                var jsonResponse = res.ToString();
-                return new ContentResult { Content = jsonResponse, ContentType = "application/json" };
+
+                _context.Litters.Add(entity);
+                _context.SaveChanges();
+
+                return ResponseShareLocation();
+            }
+            else if (data1?.OriginalDetectIntentRequest?.Payload?.Data?.Postback?.Payload != null
+                     && data1.OriginalDetectIntentRequest.Payload.Data.Postback.Payload.Contains("LOCATION", _stringcompare))
+            {
+                _logger.LogInformation("Location is sent, updating ");
+
+                var coords = data1?.OriginalDetectIntentRequest?.Payload?.Data?.Postback?.Data;
+                if (coords == null)
+                    return BadRequest();
+
+                var userId = data1.OriginalDetectIntentRequest.Payload.Data.Sender.Id;
+
+                var litters = _context.Litters   //litters without lat/long/num saved
+                    .Where(x => x.UserId == userId && x.CigarettesNum <= 0)
+                    .OrderByDescending(x => x.CreatedAt)
+                    .ToArray();
+
+                var litter = litters.FirstOrDefault();  //newest one
+                if (litter != null)
+                {
+                    _context.Litters.RemoveRange(litters.Skip(1));
+
+                    litter.CigarettesNum = 1;
+                    litter.Lat = coords.Long;
+                    litter.Long = coords.Lat;
+
+                    _context.Litters.Update(litter);
+                    _context.SaveChanges();
+
+                    return ResponseThankYou(userId);
+                }
             }
 
-            return Ok();
-
-            //    //process the file
-            //    //ask for location?
-            //    //save 
-            //    //display map
-
+            return ResponseUploadPhoto();
         }
-        #region Model
 
-        public class GoogleRequest
+        private static IActionResult ResponseShareLocation()
         {
-            public string ResponseId { get; set; }
-            public GoogleQueryResult QueryResult { get; set; }
-            public GoogleOriginalDetectIntentRequest OriginalDetectIntentRequest { get; set; }
-            public string Session { get; set; }
+            var reponseText = "Please share your location with us so we know where those cigarette butts are";
+            var dialogflowResponse = new WebhookResponse
+            {
+                FulfillmentText = reponseText,
+                FulfillmentMessages =
+                        {
+                            new Intent.Types.Message
+                            {
+                                SimpleResponses = new Intent.Types.Message.Types.SimpleResponses
+                                {
+                                    SimpleResponses_ =
+                                    {
+                                        new Intent.Types.Message.Types.SimpleResponse
+                                        {
+                                            DisplayText = reponseText,
+                                            TextToSpeech = reponseText,
+                                        }
+                                    }
+                                }
+                            }
+                        }
+            };
+            var jsonResponse = dialogflowResponse.ToString();
+            return new ContentResult { Content = jsonResponse, ContentType = "application/json" };
         }
 
-        public class GoogleQueryResult
+        private IActionResult ResponseThankYou(string userId)
         {
-            public string QueryText { get; set; }
-            public string FullfillmentText { get; set; }
+            var reportsnum =
+                _context.Litters.Count(x => x.UserId == userId && x.CreatedAt.Month == DateTime.Now.Month);
+
+            var nth =
+                reportsnum % 10 == 1 ? "st" :
+                reportsnum % 10 == 2 ? "nd" :
+                reportsnum % 10 == 3 ? "rd" : "th";
+            var reponseText =
+                $"Thank you for taking care of the Earth! We'll use this data to take care of cigarette butt littering problem! This was your {reportsnum}{nth} delation :)' \n You can see them now on the map http://fajeczky.azurewebsites.net/";
+            var dialogflowResponse = new WebhookResponse
+            {
+                FulfillmentText = reponseText
+            };
+
+
+            var jsonResponse = dialogflowResponse.ToString();
+            return new ContentResult { Content = jsonResponse, ContentType = "application/json" };
         }
 
-        public class GoogleOriginalDetectIntentRequest
+        private static IActionResult ResponseUploadPhoto()
         {
-            public string Source { get; set; }
-            public GooglePayload Payload { get; set; }
+            var reponseText = "Please take a photo first";
+            var dialogflowResponse = new WebhookResponse
+            {
+                FulfillmentText = reponseText,
+                FulfillmentMessages =
+                        {
+                            new Intent.Types.Message
+                            {
+                                SimpleResponses = new Intent.Types.Message.Types.SimpleResponses
+                                {
+                                    SimpleResponses_ =
+                                    {
+                                        new Intent.Types.Message.Types.SimpleResponse
+                                        {
+                                            DisplayText = reponseText,
+                                            TextToSpeech = reponseText,
+                                        }
+                                    }
+                                }
+                            }
+                        }
+            };
+            var jsonResponse = dialogflowResponse.ToString();
+            return new ContentResult { Content = jsonResponse, ContentType = "application/json" };
         }
-
-        public class GooglePayload
-        {
-            public GooglePayloadData Data { get; set; }
-            public string Source { get; set; }
-        }
-
-        public class GooglePayloadData
-        {
-            public GoogleRecipent Recipent { get; set; }
-            public GoogleMessage Message { get; set; }
-            public double Timestamp { get; set; }
-            public GoogleSender Sender { get; set; }
-            public GooglePostback Postback { get; set; }
-        }
-
-        public class GooglePostback
-        {
-            public string Payload { get; set; }
-            public GoogleCoords Data { get; set; }
-        }
-
-        public class GoogleCoords
-        {
-            public double Lat { get; set; }
-            public double Long { get; set; }
-        }
-
-        public class GoogleRecipent
-        {
-            public string Id { get; set; }
-        }
-
-        public class GoogleMessage
-        {
-            public string Mid { get; set; }
-            public GoogleAttachment[] Attachments { get; set; }
-        }
-
-        public class GoogleAttachment
-        {
-            public GoogleAttachmentPayload Payload { get; set; }
-            public string Type { get; set; }
-        }
-
-        public class GoogleAttachmentPayload
-        {
-            public string Url { get; set; }
-        }
-
-        public class GoogleSender
-        {
-            public string Id { get; set; }
-        }
-
-        #endregion model
     }
 }
