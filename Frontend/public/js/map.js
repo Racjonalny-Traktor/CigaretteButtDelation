@@ -1,3 +1,5 @@
+import fetcher from './fetcher.js';
+
 mapboxgl.accessToken = 'pk.eyJ1Ijoia3Bla2FsYSIsImEiOiJjazBqcDl0dXIwYzJxM2dzdmVoMGdsbmx3In0.LUI-WrcAUM_It4GHMo9hvQ';
 var map = new mapboxgl.Map({
     container: 'mapContainer',
@@ -93,5 +95,25 @@ map.on('load', () =>{
             
     
 })
+
+export function getNewCigarettesNumber(cigarettes){
+    const canvas = map.getCanvas()
+    const w = canvas.width
+    const h = canvas.height
+    const cUL = map.unproject ([0,0]).toArray()
+    const cUR = map.unproject ([w,0]).toArray()
+    const cLR = map.unproject ([w,h]).toArray()
+    const cLL = map.unproject ([0,h]).toArray()
+    const coordinates = [cUL,cUR,cLR,cLL]
+    let number = 0;
+
+    for(let cig of cigarettes){
+        if(cig.lat > cUL[0] && cig.lat < cUR[0] && cig.long < cUL[1] && cig.long < cUR[1]){
+            number += cig.cigarettesNum;
+        }
+    }
+
+    return number;
+}
 
 export default map;
