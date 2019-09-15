@@ -41,7 +41,7 @@ function findNumberOfCigarettesInArea(){
 }
 
 function updateCigarettesText(numOfCigarettes){
-    $('.numOfCigarettes').text(`${numOfCigarettes} butts int this area`);
+    $('.numOfCigarettes').text(`${numOfCigarettes} butts in this area`);
 }
 
 function updatePollutionText(percent){
