@@ -57,149 +57,175 @@ namespace microserv.Controllers
             _logger.LogWarning(json);
 
             var data1 = JsonConvert.DeserializeObject<GoogleRequest>(json);
+            var data2 = JsonConvert.DeserializeObject<WebhookRequest>(json);
 
-
-            var attachments = data1?.OriginalDetectIntentRequest?.Payload?.Data?.Message?.Attachments;
-            //image is sent
-            if (attachments != null
-                && attachments.Any()
-                && attachments.First().Type.Equals("image", StringComparison.InvariantCultureIgnoreCase))
+            if (data1.OriginalDetectIntentRequest.Source.Equals("facebook", StringComparison.InvariantCultureIgnoreCase)
+            )
             {
-                _logger.LogInformation("pic is sent, creating");
 
-                var picUrl = attachments.First().Payload.Url;
-
-                var entity = new Litter
+                var attachments = data1?.OriginalDetectIntentRequest?.Payload?.Data?.Message?.Attachments;
+                //image is sent
+                if (attachments != null
+                    && attachments.Any()
+                    && attachments.First().Type.Equals("image", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    UserId = data1.OriginalDetectIntentRequest.Payload.Data.Sender.Id,
-                    ImageUrl = picUrl
-                };
+                    _logger.LogInformation("pic is sent, creating");
 
-                _context.Litters.Add(entity);
-                _context.SaveChanges();
+                    var picUrl = attachments.First().Payload.Url;
 
-                var reponseText = "Please share your location with us so we know where those cigarette butts are";
-                var dialogflowResponse = new WebhookResponse
-                {
-                    FulfillmentText = reponseText,
-                    FulfillmentMessages =
+                    var entity = new Litter
                     {
-                        new Intent.Types.Message
-                        {
-                            SimpleResponses = new Intent.Types.Message.Types.SimpleResponses
-                            {
-                                SimpleResponses_ =
-                                {
-                                    new Intent.Types.Message.Types.SimpleResponse
-                                    {
-                                        DisplayText = reponseText,
-                                        TextToSpeech = reponseText,
-                                    }
-                                }
-                            }
-                        }
-                    }
-                };
-                var jsonResponse = dialogflowResponse.ToString();
-                return new ContentResult { Content = jsonResponse, ContentType = "application/json" };
-                ;
-            }
-            else if (data1?.OriginalDetectIntentRequest?.Payload?.Data?.Postback?.Payload != null
-                     && data1.OriginalDetectIntentRequest.Payload.Data.Postback.Payload.Contains("LOCATION",
-                         StringComparison.InvariantCultureIgnoreCase))
-            {
-                _logger.LogInformation("Location sent, updating ");
+                        UserId = data1.OriginalDetectIntentRequest.Payload.Data.Sender.Id,
+                        ImageUrl = picUrl
+                    };
 
-                var coords = data1?.OriginalDetectIntentRequest?.Payload?.Data?.Postback?.Data;
-                if (coords == null) return BadRequest();
-
-                var userId = data1.OriginalDetectIntentRequest.Payload.Data.Sender.Id;
-
-                //litters without lat/long/num saved
-                var litters = _context.Litters
-                    .Where(x => x.UserId == userId && x.CigarettesNum <= 0)
-                    .OrderByDescending(x => x.CreatedAt)
-                    .ToArray();
-                var litter = litters.FirstOrDefault();
-                if (litter != null)
-                {
-
-                    var toDelete = litters.Skip(1);
-
-                    _context.Litters.RemoveRange(litters);
-
-                    litter.CigarettesNum = 1;
-                    litter.Lat = coords.Lat;
-                    litter.Long = coords.Long;
-
-                    _context.Litters.Update(litter);
+                    _context.Litters.Add(entity);
                     _context.SaveChanges();
 
-
-
-                    var reportsnum =
-                        _context.Litters.Count(x => x.UserId == userId && x.CreatedAt.Month == DateTime.Now.Month);
-
-                    var nth =
-                        reportsnum % 10 == 1 ? "st" :
-                        reportsnum % 10 == 2 ? "nd" :
-                        reportsnum % 10 == 3 ? "rd" : "th";
-                    var reponseText =
-                        $"Thank you for taking care of the Earth! We'll use this data to take care of cigarette butt littering problem! This was your {reportsnum}{nth} delation :)'";
+                    var reponseText = "Please share your location with us so we know where those cigarette butts are";
                     var dialogflowResponse = new WebhookResponse
                     {
                         FulfillmentText = reponseText,
                         FulfillmentMessages =
+                        {
+                            new Intent.Types.Message
                             {
-                                new Intent.Types.Message
+                                SimpleResponses = new Intent.Types.Message.Types.SimpleResponses
                                 {
-                                    SimpleResponses = new Intent.Types.Message.Types.SimpleResponses
+                                    SimpleResponses_ =
                                     {
-                                        SimpleResponses_ =
+                                        new Intent.Types.Message.Types.SimpleResponse
                                         {
-                                            new Intent.Types.Message.Types.SimpleResponse
-                                            {
-                                                DisplayText = reponseText,
-                                                TextToSpeech = reponseText,
-                                            }
+                                            DisplayText = reponseText,
+                                            TextToSpeech = reponseText,
                                         }
                                     }
                                 }
                             }
+                        }
                     };
                     var jsonResponse = dialogflowResponse.ToString();
-                    return new ContentResult { Content = jsonResponse, ContentType = "application/json" };
+                    return new ContentResult {Content = jsonResponse, ContentType = "application/json"};
+                    ;
+                }
+                else if (data1?.OriginalDetectIntentRequest?.Payload?.Data?.Postback?.Payload != null
+                         && data1.OriginalDetectIntentRequest.Payload.Data.Postback.Payload.Contains("LOCATION",
+                             StringComparison.InvariantCultureIgnoreCase))
+                {
+                    _logger.LogInformation("Location sent, updating ");
+
+                    var coords = data1?.OriginalDetectIntentRequest?.Payload?.Data?.Postback?.Data;
+                    if (coords == null) return BadRequest();
+
+                    var userId = data1.OriginalDetectIntentRequest.Payload.Data.Sender.Id;
+
+                    //litters without lat/long/num saved
+                    var litters = _context.Litters
+                        .Where(x => x.UserId == userId && x.CigarettesNum <= 0)
+                        .OrderByDescending(x => x.CreatedAt)
+                        .ToArray();
+                    var litter = litters.FirstOrDefault();
+                    if (litter != null)
+                    {
+
+                        var toDelete = litters.Skip(1);
+
+                        _context.Litters.RemoveRange(litters);
+
+                        litter.CigarettesNum = 1;
+                        litter.Lat = coords.Long;
+                        litter.Long = coords.Lat;
+
+                        _context.Litters.Update(litter);
+                        _context.SaveChanges();
+
+
+
+                        var reportsnum =
+                            _context.Litters.Count(x => x.UserId == userId && x.CreatedAt.Month == DateTime.Now.Month);
+
+                        var nth =
+                            reportsnum % 10 == 1 ? "st" :
+                            reportsnum % 10 == 2 ? "nd" :
+                            reportsnum % 10 == 3 ? "rd" : "th";
+                        var reponseText =
+                            $"Thank you for taking care of the Earth! We'll use this data to take care of cigarette butt littering problem! This was your {reportsnum}{nth} delation :)' \n You can see them now on the map http://fajeczky.azurewebsites.net/";
+                        var dialogflowResponse = new WebhookResponse
+                        {
+                            FulfillmentText = reponseText
+                        };
+
+
+                        var jsonResponse = dialogflowResponse.ToString();
+                        return new ContentResult {Content = jsonResponse, ContentType = "application/json"};
+
+                    }
+                }
+
+                {
+                    var reponseText = "Please take a photo first";
+                    var dialogflowResponse = new WebhookResponse
+                    {
+                        FulfillmentText = reponseText,
+                        FulfillmentMessages =
+                        {
+                            new Intent.Types.Message
+                            {
+                                SimpleResponses = new Intent.Types.Message.Types.SimpleResponses
+                                {
+                                    SimpleResponses_ =
+                                    {
+                                        new Intent.Types.Message.Types.SimpleResponse
+                                        {
+                                            DisplayText = reponseText,
+                                            TextToSpeech = reponseText,
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    };
+                    var jsonResponse = dialogflowResponse.ToString();
+                    return new ContentResult {Content = jsonResponse, ContentType = "application/json"};
 
                 }
             }
 
+            else if (data1.OriginalDetectIntentRequest.Source.Equals("google",
+                StringComparison.InvariantCultureIgnoreCase))
             {
-                var reponseText = "Please take a photo first";
-                var dialogflowResponse = new WebhookResponse
+                _logger.LogInformation("google");
+                var res = new
                 {
-                    FulfillmentText = reponseText,
-                    FulfillmentMessages =
+                    expectedInputs = new[]
                     {
-                        new Intent.Types.Message
+                        new
                         {
-                            SimpleResponses = new Intent.Types.Message.Types.SimpleResponses
+                            possibleIntents = new []
                             {
-                                SimpleResponses_ =
+                                new
                                 {
-                                    new Intent.Types.Message.Types.SimpleResponse
+                                    intent = "actions.intent.PERMISSION",
+                                    inputValueData = new
                                     {
-                                        DisplayText = reponseText,
-                                        TextToSpeech = reponseText,
-                                    }
+                                        @type = "type.googleapis.com/google.actions.v2.PermissionValueSpec",
+                                        permissions = new [] {"NAME", "DEVICE_PRECISE_LOCATION" }
+                                    },
+                                    optContext = "to locate you"
                                 }
                             }
                         }
                     }
                 };
-                var jsonResponse = dialogflowResponse.ToString();
+                var x = new WebhookResponse()
+                {
+                    FollowupEventInput = new EventInput() { Name = "DEVICE_PRECISE_LOCATION" }
+                };
+                var jsonResponse = res.ToString();
                 return new ContentResult { Content = jsonResponse, ContentType = "application/json" };
-
             }
+
+            return Ok();
 
             //    //process the file
             //    //ask for location?
@@ -207,6 +233,7 @@ namespace microserv.Controllers
             //    //display map
 
         }
+        #region Model
 
         public class GoogleRequest
         {
@@ -282,6 +309,6 @@ namespace microserv.Controllers
             public string Id { get; set; }
         }
 
-
+        #endregion model
     }
 }
