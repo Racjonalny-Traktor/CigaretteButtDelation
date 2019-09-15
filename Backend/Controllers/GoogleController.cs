@@ -46,6 +46,7 @@ namespace microserv.Controllers
             catch(Exception e)
             {
                 _logger.LogError(e.Message);
+                return BadRequest(e);
             }
         }
 
