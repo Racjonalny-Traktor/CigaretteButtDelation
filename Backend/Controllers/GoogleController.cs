@@ -33,21 +33,26 @@ namespace microserv.Controllers
             //google location doesn't even work
             //fml
 
-            var json = new StreamReader(Request.Body).ReadToEnd();
-            _logger.LogWarning(json);   //display json for debug purposes
-
-            var data1 = JsonConvert.DeserializeObject<GoogleRequest>(json); // my own type
-            var data2 = JsonConvert.DeserializeObject<WebhookRequest>(json); // type from google lib that doesnt work
-
-            try
+            using (var body = new StreamReader(Request.Body))
             {
-                return HandleChatbotRequest(data1);
+                var json = body.ReadToEnd();
+
+                _logger.LogWarning(json);   //display json for debug purposes
+
+                var data1 = JsonConvert.DeserializeObject<GoogleRequest>(json); // my own type
+                var data2 = JsonConvert.DeserializeObject<WebhookRequest>(json); // type from google lib that doesnt work
+
+                try
+                {
+                    return HandleChatbotRequest(data1);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e.Message);
+                    return BadRequest(e);
+                }
             }
-            catch(Exception e)
-            {
-                _logger.LogError(e.Message);
-                return BadRequest(e);
-            }
+
         }
 
         private IActionResult HandleChatbotRequest(GoogleRequest data1)
