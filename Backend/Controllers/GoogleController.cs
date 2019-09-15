@@ -53,6 +53,13 @@ namespace microserv.Controllers
         [HttpPost("try")]
         public IActionResult GooglesEndpoint()
         {
+            //dialogflow api is broken
+            //had to do my own classes
+            //built-in WebhookRequest/Response are lacking all of the data
+            //messenger has limited its functionality with buttons last month
+            //google location doesn't even work
+            //fml
+
             var json = new StreamReader(Request.Body).ReadToEnd();
             _logger.LogWarning(json);
 
